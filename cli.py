@@ -86,7 +86,7 @@ def log(args):
         oid = commit.parent
         
 def checkout(args):
-    base.checkout(args.oid)
+    base.checkout(args.oid, dry_run=False)
     
 def tag(args):
     oid = args.oid or data.get_ref('HEAD')

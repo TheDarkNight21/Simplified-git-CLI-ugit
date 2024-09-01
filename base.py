@@ -26,8 +26,9 @@ def write_tree(directory='.'):
 
     # Create the tree object
     tree = ''.join(f'{type_} {oid} {name}\n' for name, oid, type_ in sorted(entries))
-    
+    print(tree)
     # Hash and store the tree object
+    print(data.hash_object(tree.encode(), 'tree'))
     return data.hash_object(tree.encode(), 'tree')
     
     
@@ -53,31 +54,40 @@ def get_tree(oid, base_path=''): # recursively parses a tree into a dictionary
         else:
             assert False, f'Unknown tree entry {type_}'
             
-def read_tree(tree_old): # goal of reading and writing a tree is so the user can write a tree at a point in time, and go back to look at their previous code via read_tree
-    _empy_current_directory()
-    for path, oid in get_tree(tree_old, base_path='./').items(): # gets path and oid of all objects in the tree
-        os.makedirs(os.path.dirname(path), exist_ok=True) # makes directory (if they are there, nothing will happen)
-        with open(path, 'wb') as f: # opens the directory
-            f.write(data.get_object(oid)) # write the previous data
+def read_tree(tree_old, dry_run=False):
+    if not dry_run:
+        _empy_current_directory()
+    else:
+        print("[Dry-Run] Would empty current directory")
+
+    for path, oid in get_tree(tree_old, base_path='./').items():
+        if not dry_run:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'wb') as f:
+                f.write(data.get_object(oid))
+        else:
+            print(f"[Dry-Run] Would restore {path} with oid {oid}")
             
-def _empy_current_directory():
-    for root,dirnames, filenames in os.walk('.', topdown=False): # go through all items in directory
-        for filename in filenames: # for each file
-            path = os.path.relpath(f'{root}/{filename}') # make path
-            if is_ignored(path) or not os.path.isfile(path): # if it needs to be ignored or its not a file
-                continue # ignore
-            os.remove(path) # remove file
-        for dirname in dirnames: # go through directories
-            path = os.path.relpath(f'{root}/{dirname}') # make path
-            if is_ignored(path): # if its ignored
-                continue # ignore it
-            try:
-                os.rmdir(path) # remove directory
-            except (FileNotFoundError, OSError):
-                pass # if its already not there or removed, ignore errors. 
+def _empy_current_directory(dry_run=False):
+    for root, dirnames, filenames in os.walk('.', topdown=False):
+        for filename in filenames:
+            path = os.path.relpath(f'{root}/{filename}')
+            if is_ignored(path) or not os.path.isfile(path):
+                continue
+            if not dry_run:
+                os.remove(path)
+                print(f"File removed: {path}")
+            else:
+                print(f"[Dry-Run] Would remove file {path}")
+        for dirname in dirnames:
+            if not dry_run:
+                os.rmdir(dirname)
+                print(f"Directory removed: {path}")
+            else:
+                print(f"[Dry-Run] Would remove directory {dirname}")
             
 def commit(message):
-    commit = f'tree {write_tree}\n'
+    commit = f'tree {write_tree()}\n'
     HEAD = data.get_ref('HEAD') # get the head (previous commit oid)
     commit += f'parent {HEAD}\n' # display it
     commit += "\n"
@@ -88,10 +98,14 @@ def commit(message):
     
     return oid
 
-def checkout(oid):
+def checkout(oid, dry_run=False):
     commit = get_commit(oid)
-    read_tree(commit.tree)
-    data.update_ref('HEAD', oid)
+    print(f"Checking out commit: {commit}")
+    if not dry_run:
+        read_tree(commit.tree)
+        data.update_ref('HEAD', oid)
+    else:
+        print(f"[Dry-Run] Would read tree {commit.tree} and update HEAD to {oid}")
     
 def create_tag(name, oid):
     data.update_ref(f'refs/tags/{name}', oid)
