@@ -1,0 +1,1 @@
+Within this project, I developed my own version of the git CLI, named ugit. This is a much simpler version of git, however I now have a much deeper understanding of how git works as well as the complexities in developing CLI's in Python. 
