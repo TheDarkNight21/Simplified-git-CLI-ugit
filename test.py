@@ -1,7 +1,7 @@
 import base
 
 def main():
-    print(base.get_commit('87b19919ae2c3183d3e3f2d75953946d66db529c'))
+    base.get_commit('f0d2147f763d78776a556bfad6080186cf95a861')
     #base.write_tree()
     
 if __name__ == "__main__":
